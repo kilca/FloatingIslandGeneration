@@ -8,7 +8,7 @@ public class NormalsVisualizer : Editor
 
     private Mesh mesh;
 
-    private bool isOn = true;
+    private bool isOn = false;
 
     public bool showNormals = true;
 
