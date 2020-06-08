@@ -69,7 +69,6 @@ public class MapGenerator : MonoBehaviour {
                 falloffMap = FalloffGenerator.GenerateFalloffMap(mapChunkSize, a, b);
             }
         }
-
         float[,] noiseMap = Noise.GenerateNoiseMap (mapChunkSize, mapChunkSize, seed, noiseScale, octaves, persistance, lacunarity, offset);
 
 		Color[] colourMap = new Color[mapChunkSize * mapChunkSize];

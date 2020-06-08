@@ -166,13 +166,33 @@ int[] triangles, float limite)
 
         List<int> newTriangles = new List<int>(triangles);
 
+        const int mapChunkSize = 241;
+        const int seed = 0;
+        const float noiseScale = 40.0f;
+        const int octaves = 7;
+        const float persistance = 0.5f;
+        const int lacunarity = 2;
+        Vector2 offset = Vector2.zero;
+
+        //A changer pour arrondir au bord
+        float[,] heightMap = Noise.GenerateNoiseMap(mapChunkSize, mapChunkSize, seed, noiseScale, octaves, persistance, lacunarity, offset);
+
+        int coeff = heightMap.Length * 12;
+        Debug.Log("heightMap length" + heightMap.Length);
+
+        StringBuilder sb = new StringBuilder();
+
         for (int i = 0; i < addedVertices.Count; i++) {
             Vector3 v = addedVertices[i];
-            v.y = 129;
+            v.y = 129 + 100 * heightMap[(int)((120 + v.x) / 12),(int)((120 + v.z) / 12)];
+            //sb.Append((120+v.x) / 12 + ",");
             addedVertices[i] = v;
         }
 
+        Debug.Log(sb);
+
         nVertices.AddRange(addedVertices);
+
 
 
         //mesh.vertices = newVertices.ToArray();
@@ -180,24 +200,6 @@ int[] triangles, float limite)
         //-----------------2)
 
         List<Edge> boundaries = getBoundariesByLimit2(vertices, triangles, 128 * txHauteur);
-
-        StringBuilder sb = new StringBuilder();
-        foreach (Edge e in boundaries) {
-            sb.Append(e.ToString());
-        }
-        Debug.Log("affichage Edges");
-        Debug.Log(sb);
-
-        sb = new StringBuilder();
-        for(int i=0;i<triangles.Length;i+=3) {
-            sb.Append(triangles[i] + ",");
-            sb.Append(triangles[i+1] + ",");
-            sb.Append(triangles[i + 2] + ",");
-            sb.Append("/");
-           
-        }
-        Debug.Log("affichage triangles");
-        Debug.Log(sb);
 
 
         //DrawAllEdges(mesh);
@@ -213,6 +215,7 @@ int[] triangles, float limite)
             newTriangles.Add(triangles[i]+n);
         }
 
+        //tout les 12
 
         //-------------4)
 

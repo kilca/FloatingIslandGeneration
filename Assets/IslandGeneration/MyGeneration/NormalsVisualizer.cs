@@ -29,6 +29,10 @@ public class NormalsVisualizer : Editor
         if (!isOn)
             return;
 
+        if (mesh.vertices.Length > 1000){
+            return;
+        }
+
         if (mesh == null)
         {
             return;
@@ -64,7 +68,8 @@ public class NormalsVisualizer : Editor
                     mesh.vertices[i],
                     mesh.vertices[i] + mesh.normals[i] * 10);
                 */
-                Handles.Label(mesh.vertices[i], "" + i);
+                //Handles.Label(mesh.vertices[i], "" + i);
+                Handles.Label(mesh.vertices[i], ""+mesh.vertices[i]);
             }
         }
         

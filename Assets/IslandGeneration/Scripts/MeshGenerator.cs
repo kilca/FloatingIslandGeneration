@@ -6,6 +6,7 @@ public static class MeshGenerator {
     const float minHauteur = 0.4f;
 
 	public static MeshData GenerateTerrainMesh(float[,] heightMap, float heightMultiplier, AnimationCurve heightCurve, int levelOfDetail) {
+
 		int width = heightMap.GetLength (0);
 		int height = heightMap.GetLength (1);
 		float topLeftX = (width - 1) / -2f;
