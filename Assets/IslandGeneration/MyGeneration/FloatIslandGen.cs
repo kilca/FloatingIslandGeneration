@@ -64,6 +64,14 @@ public class FloatIslandGenEditor : Editor
 public class FloatIslandGen : MonoBehaviour
 {
     [System.Serializable]
+    public struct TerrainType
+    {
+        public string name;
+        public float height;
+        public Color colour;
+    }
+
+    [System.Serializable]
     public class IslandPart {
 
         public float noiseScale;
@@ -210,8 +218,8 @@ public class FloatIslandGen : MonoBehaviour
         //We create from bottom
         DrawMesh(MeshGenerator.GenerateTerrainMesh(botIsland.noiseMap, botIsland.meshHeightMultiplier * 10, botIsland.meshHeightCurve, levelOfDetail), botIsland.colorTexture);
 
-        MeshHelper2.RemovePlanePart(meshFilter, true);//remove aussi les bonnes parties
-        MeshHelper2.Extrude(meshFilter, 0.9f,topIsland.noiseMap,topIsland.meshHeightMultiplier, topIsland.meshHeightCurve);//0.9 bon
+        MeshHelper.RemovePlanePart(meshFilter, true);//remove aussi les bonnes parties
+        MeshHelper.Extrude(meshFilter, 0.9f,topIsland.noiseMap,topIsland.meshHeightMultiplier, topIsland.meshHeightCurve);//0.9 bon
 
         meshRenderer.sharedMaterials[1].mainTexture = topIsland.colorTexture;
 

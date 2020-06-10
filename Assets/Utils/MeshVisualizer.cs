@@ -2,8 +2,8 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-[CustomEditor(typeof(MeshFilter))]
-public class NormalsVisualizer : Editor
+//[CustomEditor(typeof(MeshFilter))]
+public class MeshVisualizer : Editor
 {
 
     private Mesh mesh;
