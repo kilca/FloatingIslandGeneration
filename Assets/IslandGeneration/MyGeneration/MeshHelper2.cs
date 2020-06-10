@@ -4,7 +4,8 @@ using System.Collections.Generic;
 using UnityEditor;
 using System.Text;
 
-public static class MeshHelper
+using Edge = MeshHelper.Edge;
+public static class MeshHelper2
 {
     static List<Vector3> vertices;
     static List<Vector3> normals;
@@ -16,27 +17,8 @@ public static class MeshHelper
     static List<int> indices;
     static Dictionary<uint, int> newVectices;
 
-    public struct Edge {
 
-        public int a;
-        public int b;
-
-        public Edge(int a, int b) {
-            this.a = a;
-            this.b = b;
-        }
-
-        public bool IsOpposite(Edge e) {
-            return (a == e.b && b == e.a);
-        }
-
-        override
-        public string ToString() {
-            return "[" + a + "," + b + "]";
-        }
-
-    }
-
+    /*
     public static void DrawAllEdges(Mesh m) {
         List<Edge> e = new List<Edge>();
         for (int i = 0; i < m.triangles.Length-1; i++) {
@@ -44,6 +26,7 @@ public static class MeshHelper
         }
         NormalsVisualizer.edges = e;
     }
+    */
 
     public static void ReverseNormals(MeshFilter filter)
     {
@@ -151,48 +134,41 @@ int[] triangles, float limite)
 
     //https://stackoverflow.com/questions/3848923/how-to-extrude-a-flat-2d-mesh-giving-it-depth
     //Attention ordre important car indique normals
-    public static void Extrude(MeshFilter filter, float txHauteur) {
+    public static void Extrude(MeshFilter filter, float txHauteur, float[,] heightMap, float heightMultiplier, AnimationCurve heightCurve) {
 
 
         Mesh mesh = filter.sharedMesh;
 
         Vector3[] vertices = mesh.vertices;
+        Vector2[] uvs = mesh.uv;
         int[] triangles = mesh.triangles;
 
         //-------------------1)
         List<Vector3> nVertices = new List<Vector3>(vertices);
-        List<Vector3> addedVertices = new List<Vector3>(vertices);
+        List<Vector2> nUVs = new List<Vector2>(uvs);
 
+        List<Vector3> addedVertices = new List<Vector3>(vertices);
 
         List<int> newTriangles = new List<int>(triangles);
 
-        const int mapChunkSize = 241;
-        const int seed = 0;
-        const float noiseScale = 40.0f;
-        const int octaves = 7;
-        const float persistance = 0.5f;
-        const int lacunarity = 2;
-        Vector2 offset = Vector2.zero;
-
         //A changer pour arrondir au bord
-        float[,] heightMap = Noise.GenerateNoiseMap(mapChunkSize, mapChunkSize, seed, noiseScale, octaves, persistance, lacunarity, offset);
+        //float[,] heightMap = Noise.GenerateNoiseMap(mapChunkSize, mapChunkSize, seed, noiseScale, octaves, persistance, lacunarity, offset);
 
-        int coeff = heightMap.Length * 12;
-        Debug.Log("heightMap length" + heightMap.Length);
 
         StringBuilder sb = new StringBuilder();
-
         for (int i = 0; i < addedVertices.Count; i++) {
             Vector3 v = addedVertices[i];
-            v.y = 129 + 100 * heightMap[(int)((120 + v.x) / 12),(int)((120 + v.z) / 12)];
-            //sb.Append((120+v.x) / 12 + ",");
+            v.y = 129 + 10* heightCurve.Evaluate(heightMap[(int)((120 + v.x) / 12),(int)((120 + v.z) / 12)]) * heightMultiplier;
+            //v.y = 129 + Mathf.Pow(2 * heightCurve.Evaluate(heightMap[(int)((120 + v.x) / 12), (int)((120 + v.z) / 12)]),heightMultiplier);
+            //sb.Append(10*heightCurve.Evaluate(heightMap[(int)((120 + v.x) / 12), (int)((120 + v.z) / 12)])*heightMultiplier+"|");
+            //v.y = 129 + 100 * heightMap[(int)((120 + v.x) / 12), (int)((120 + v.z) / 12)];
             addedVertices[i] = v;
         }
 
         Debug.Log(sb);
 
         nVertices.AddRange(addedVertices);
-
+        nUVs.AddRange(nUVs);
 
 
         //mesh.vertices = newVertices.ToArray();
@@ -265,9 +241,38 @@ int[] triangles, float limite)
         }
 
 
+        filter.sharedMesh.subMeshCount = 2;
+
+        Debug.Log("1) submeshcount = " + filter.sharedMesh.subMeshCount);
+
         mesh.vertices = nVertices.ToArray();
-        mesh.triangles = newTriangles.ToArray();
+
+        Debug.Log("2) submeshcount = " + filter.sharedMesh.subMeshCount);
+
+        /*
+        Debug.Log("newTriangle count :" + newTriangles.Count);
+        Debug.Log("oldTriangle count :" + triangles.Length);
+        */
+
+        List<int> triangle1 = newTriangles.GetRange(0, triangles.Length);
+        List<int> triangle2 = newTriangles.GetRange(triangles.Length, newTriangles.Count - triangles.Length);
+
+        /*
+        Debug.Log("newTriangle count :" + triangle1.Count);
+        Debug.Log("oldTriangle count :" + triangle2.Count);
+        */
+
+        mesh.SetTriangles(triangle1, 0);
+
+        mesh.SetTriangles(triangle2, 1);
+
+        Debug.Log("3) submeshcount = " + filter.sharedMesh.subMeshCount);
+
+        //mesh.triangles = newTriangles.ToArray();
         mesh.normals = newNormals.ToArray();
+        mesh.uv = nUVs.ToArray();
+
+        Debug.Log("4) submeshcount = " + filter.sharedMesh.subMeshCount);
 
         //Affichage
 
@@ -325,10 +330,13 @@ int[] triangles, float limite)
 
         Mesh mesh = filter.sharedMesh;
 
+        Vector2[] uvs = mesh.uv;
         Vector3[] vertices = mesh.vertices;
         int[] triangles = mesh.triangles;
 
         List<Vector3> nVertices = new List<Vector3>();
+
+        List<Vector2> nvUVS = new List<Vector2>();
 
         List<int> newTriangles = new List<int>();
 
@@ -346,6 +354,7 @@ int[] triangles, float limite)
                 for (int j = 0; j < 3; j++) {
                  
                     if (!mapOldToNew.ContainsKey(triangles[i+j])) {
+                        nvUVS.Add(uvs[triangles[i+j]]);
                         nVertices.Add((vertices[triangles[i+j]]));
                         mapOldToNew.Add(triangles[i + j], nVertices.Count-1);
                     }
@@ -356,8 +365,8 @@ int[] triangles, float limite)
 
         }
 
-        Debug.Log("avant vertices count :" + vertices.Length);
-        Debug.Log("apres vertices count :" + nVertices.Count);
+        //Debug.Log("avant vertices count :" + vertices.Length);
+        //Debug.Log("apres vertices count :" + nVertices.Count);
         if (removeVertices)
         {
             //on reassigne les triangle aux nouveaux vertices
@@ -371,6 +380,7 @@ int[] triangles, float limite)
             }
             mesh.triangles = newTriangles.ToArray();
             mesh.SetVertices(nVertices);
+            mesh.uv = nvUVS.ToArray();
         }
         else {
             mesh.triangles = newTriangles.ToArray();
