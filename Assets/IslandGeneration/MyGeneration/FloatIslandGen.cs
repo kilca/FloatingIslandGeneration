@@ -105,6 +105,8 @@ public class FloatIslandGen : MonoBehaviour
 
     [Header("Global Values")]
     public int seed;
+
+    //currently can't modify chunkSize
     public int mapChunkSize = 241;
 
     [Range(0, 6)]
@@ -112,7 +114,9 @@ public class FloatIslandGen : MonoBehaviour
 
     public bool autoUpdate;
 
+    //0.8
     public float a;
+    //0.5
     public float b;
 
     [Header("Island Parts")]
