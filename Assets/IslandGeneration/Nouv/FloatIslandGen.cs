@@ -149,13 +149,28 @@ public class FloatIslandGen : MonoBehaviour
 
         Color[] colourMapBot = new Color[mapChunkSize * mapChunkSize];
         Color[] colourMapTop = new Color[mapChunkSize * mapChunkSize];
+
+
+        
+        //for falloffmap of top Island (same of botIsland
+        for (int y = 0; y < mapChunkSize; y++)
+        {
+            for (int x = 0; x < mapChunkSize; x++)
+            {
+
+                topIsland.noiseMap[x, y] = Mathf.Clamp01(botIsland.fallOffMap[x, y] + 1.0f * topIsland.noiseMap[x, y]);
+
+            }
+        }
+        
+
         for (int y = 0; y < mapChunkSize; y++)
         {
             for (int x = 0; x < mapChunkSize; x++)
             {
 
 
-                //1.0f *  ou 0.5 *
+                //1.0f * or 0.5 *
                 botIsland.noiseMap[x, y] = Mathf.Clamp01(botIsland.fallOffMap[x, y] + 1.0f * botIsland.noiseMap[x, y]);
 
 
@@ -182,7 +197,6 @@ public class FloatIslandGen : MonoBehaviour
 
             }
         }
-  
 
 
         botIsland.noiseTexture = TextureGenerator.TextureFromHeightMap(botIsland.noiseMap);

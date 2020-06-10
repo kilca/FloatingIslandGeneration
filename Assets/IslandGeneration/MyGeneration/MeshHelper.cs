@@ -42,7 +42,7 @@ public static class MeshHelper
         for (int i = 0; i < m.triangles.Length-1; i++) {
             e.Add(new Edge(m.triangles[i], m.triangles[i + 1]));
         }
-        NormalsVisualizer.edges = e;
+       // NormalsVisualizer.edges = e;
     }
 
     public static void ReverseNormals(MeshFilter filter)

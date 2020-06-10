@@ -10,9 +10,6 @@ public class NormalsVisualizer : Editor
 
     private bool isOn = false;
 
-    public bool showNormals = true;
-
-    public static List<MeshHelper.Edge> edges;
 
     void OnEnable()
     {
@@ -37,11 +34,10 @@ public class NormalsVisualizer : Editor
         {
             return;
         }
-        if (!showNormals && edges == null)
-            return;
-        if (!showNormals)
-        {
-            foreach (MeshHelper.Edge e in edges)
+
+
+            Vector3[] vertices = mesh.vertices;
+            foreach (Vector3 v in vertices)
             {
                 Handles.matrix = (target as MeshFilter).transform.localToWorldMatrix;
                 Handles.color = Color.yellow;
@@ -50,28 +46,11 @@ public class NormalsVisualizer : Editor
                     mesh.vertices[e.a],
                     mesh.vertices[e.b]);
                 */
-                Handles.Label(mesh.vertices[e.a], "" +e.a);
-                Handles.Label(mesh.vertices[e.b], "" + e.b);
+                Handles.Label(v,""+v.x+","+v.z);
 
             }
-        }
-        else
-        {
+        
 
-
-            for (int i = 0; i < mesh.vertexCount; i++)
-            {
-                Handles.matrix = (target as MeshFilter).transform.localToWorldMatrix;
-                Handles.color = Color.yellow;
-                /*
-                Handles.DrawLine(
-                    mesh.vertices[i],
-                    mesh.vertices[i] + mesh.normals[i] * 10);
-                */
-                //Handles.Label(mesh.vertices[i], "" + i);
-                Handles.Label(mesh.vertices[i], ""+mesh.vertices[i]);
-            }
-        }
         
     }
 }

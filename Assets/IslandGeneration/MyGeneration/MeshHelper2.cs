@@ -155,48 +155,66 @@ int[] triangles, float limite)
         //float[,] heightMap = Noise.GenerateNoiseMap(mapChunkSize, mapChunkSize, seed, noiseScale, octaves, persistance, lacunarity, offset);
 
 
+        
         StringBuilder sb = new StringBuilder();
+
+        StringBuilder sb2 = new StringBuilder();
+        //probleme zone est censé etre moins dans le coin bas gauche
+        //l'uv respecte la contrainte du lieu mais pas la heightmap
+
+
+        int width = heightMap.GetLength(0);
+        int height = heightMap.GetLength(1);
+        float topLeftX = (width - 1) / -2f;
+        float topLeftZ = (height - 1) / 2f;
+
+        //de -120 à 120
+
         for (int i = 0; i < addedVertices.Count; i++) {
             Vector3 v = addedVertices[i];
-            v.y = 129 + 10* heightCurve.Evaluate(heightMap[(int)((120 + v.x) / 12),(int)((120 + v.z) / 12)]) * heightMultiplier;
-            //v.y = 129 + Mathf.Pow(2 * heightCurve.Evaluate(heightMap[(int)((120 + v.x) / 12), (int)((120 + v.z) / 12)]),heightMultiplier);
-            //sb.Append(10*heightCurve.Evaluate(heightMap[(int)((120 + v.x) / 12), (int)((120 + v.z) / 12)])*heightMultiplier+"|");
-            //v.y = 129 + 100 * heightMap[(int)((120 + v.x) / 12), (int)((120 + v.z) / 12)];
+
+            int x = (int)(nUVs[i].x * width);
+            int y =  (int)(nUVs[i].y * height);
+            
+
+            sb.Append(x + "," + y+"\n");
+            sb2.Append(nUVs[i].x + "," + nUVs[i].y + "\n");
+
+            v.y = 140 + heightCurve.Evaluate(heightMap[x, y]) * heightMultiplier;
+
             addedVertices[i] = v;
         }
+        
+        Debug.Log("sb1"+sb);
+        Debug.Log("sb2"+sb2);
+        Debug.Log("heightmap length :" + width);
 
-        Debug.Log(sb);
+        
 
         nVertices.AddRange(addedVertices);
+        
         nUVs.AddRange(nUVs);
-
-
-        //mesh.vertices = newVertices.ToArray();
 
         //-----------------2)
 
         List<Edge> boundaries = getBoundariesByLimit2(vertices, triangles, 128 * txHauteur);
 
 
-        //DrawAllEdges(mesh);
         //----------------3)
 
         int n = vertices.Length;
 
-        //NormalsVisualizer.edges = boundaries;
-
-        Debug.Log("valeur de n :" + n);
 
         for (int i = 0; i < triangles.Length; i++) {
             newTriangles.Add(triangles[i]+n);
         }
 
-        //tout les 12
 
         //-------------4)
 
-        //On affiche des deux cotés car il y a des problemes d'ordre pour certains
-        //Ordre 1
+        //We display the triangle of the 2 sides because some triangles are inversed
+        
+        //Side 1
         foreach (Edge e in boundaries) {
             newTriangles.Add(e.a);
             newTriangles.Add(e.b);
@@ -209,7 +227,7 @@ int[] triangles, float limite)
         }
         
 
-        //Ordre 2
+        //Side 2
         
         foreach (Edge e in boundaries)
         {
@@ -223,11 +241,9 @@ int[] triangles, float limite)
 
         }
         
-
         //5* normals
         List<Vector3> newNormals = new List<Vector3>(mesh.normals);
-        Debug.Log("old mesh normals : " + mesh.normals.Length);
-        Debug.Log("old mesh vertices : " + mesh.vertices.Length);
+
         for (int i = 0; i < n; i++)
         {
             newNormals[i] = -newNormals[i];
@@ -243,38 +259,18 @@ int[] triangles, float limite)
 
         filter.sharedMesh.subMeshCount = 2;
 
-        Debug.Log("1) submeshcount = " + filter.sharedMesh.subMeshCount);
-
         mesh.vertices = nVertices.ToArray();
-
-        Debug.Log("2) submeshcount = " + filter.sharedMesh.subMeshCount);
-
-        /*
-        Debug.Log("newTriangle count :" + newTriangles.Count);
-        Debug.Log("oldTriangle count :" + triangles.Length);
-        */
 
         List<int> triangle1 = newTriangles.GetRange(0, triangles.Length);
         List<int> triangle2 = newTriangles.GetRange(triangles.Length, newTriangles.Count - triangles.Length);
-
-        /*
-        Debug.Log("newTriangle count :" + triangle1.Count);
-        Debug.Log("oldTriangle count :" + triangle2.Count);
-        */
 
         mesh.SetTriangles(triangle1, 0);
 
         mesh.SetTriangles(triangle2, 1);
 
-        Debug.Log("3) submeshcount = " + filter.sharedMesh.subMeshCount);
-
-        //mesh.triangles = newTriangles.ToArray();
         mesh.normals = newNormals.ToArray();
         mesh.uv = nUVs.ToArray();
-
-        Debug.Log("4) submeshcount = " + filter.sharedMesh.subMeshCount);
-
-        //Affichage
+       
 
 
     }
