@@ -12,5 +12,9 @@ Currently containing :
  - Mesh extrusion
  - Many properties (noise, seed etc ...)
  - Height Color Generation
+ 
+This code is free to use, please just mention me and Sebastian Lague if you can.
+
+I plan to continue this project on my free time.
 
 ![Preview](https://github.com/super-cokil/FloatingIslandGeneration/blob/master/preview.PNG)
