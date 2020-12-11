@@ -61,6 +61,7 @@ public class FloatIslandGenEditor : Editor
         }
 
 
+
         /*
         Texture2D myTexture = AssetPreview.GetAssetPreview(object);
         GUILayout.Label(myTexture);
@@ -271,5 +272,17 @@ public class FloatIslandGen : MonoBehaviour
 
         meshRenderer.sharedMaterials[1].mainTexture = topIsland.colorTexture;
 
+        /*
+        int R = 8;
+        
+        List<Vector3> t = MeshHelper.PlaceTrees(mapChunkSize, mapChunkSize,seed, R, topIsland.noiseMap);
+
+        StringBuilder sb = new StringBuilder();
+
+        foreach(Vector3 v in t) {
+            sb.Append(v + "\n");
+        }
+        Debug.Log(sb);
+        */
     }
 }

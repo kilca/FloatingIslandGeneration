@@ -150,7 +150,7 @@ int[] triangles, float limite)
             //v.y = 140 + heightCurve.Evaluate(heightMap[x, y]) * heightMultiplier;
 
             float f = Mathf.Clamp01(-1.0f *(heightMap[x, y]-1.0f));
-            v.y = 140 + 10 * heightCurve.Evaluate(f);
+            v.y = 140 + heightMultiplier * heightCurve.Evaluate(f);
 
             addedVertices[i] = v;
         }
@@ -237,7 +237,7 @@ int[] triangles, float limite)
 
 
     }
-    
+
     public static void RemovePlanePart(MeshFilter filter, bool removeVertices)
     {
         //old position of array to newPosition of array

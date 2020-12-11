@@ -5,6 +5,8 @@ The main goal is to create a working procedural floating island.
 
 Some script was made by Sebastian Lague and used for this project, all his scripts belong to him.
 
+The algorithms used here are absolutely not optimised. This is just a free example for others.
+
 Currently containing :
  - UnderIsland HeightMap generation
  - TopIsland HeightMap generation
