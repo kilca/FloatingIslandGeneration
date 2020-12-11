@@ -39,6 +39,9 @@ public class FloatIslandGenEditor : Editor
 
             GUILayout.Label("colorTexture");
             GUILayout.Label(mapGen.botIsland.colorTexture);
+
+            GUILayout.Label("falloffTexture");
+            GUILayout.Label(mapGen.botIsland.fallOffTexture);
         }
 
         isFold2 = EditorGUILayout.Foldout(isFold2, "Show top Textures");
@@ -51,6 +54,10 @@ public class FloatIslandGenEditor : Editor
 
             GUILayout.Label("colorTexture");
             GUILayout.Label(mapGen.topIsland.colorTexture);
+
+            GUILayout.Label("falloffTexture");
+            GUILayout.Label(mapGen.topIsland.fallOffTexture);
+
         }
 
 
@@ -156,25 +163,14 @@ public class FloatIslandGen : MonoBehaviour
         botIsland.fallOffMap = FalloffGenerator.GenerateFalloffMap(mapChunkSize, a, b);
         botIsland.noiseMap = Noise.GenerateNoiseMap(mapChunkSize, mapChunkSize, seed, botIsland.noiseScale, botIsland.octaves, botIsland.persistance, botIsland.lacunarity, botIsland.offset);
 
-        topIsland.fallOffMap = FalloffGenerator.GenerateFalloffMap(mapChunkSize, a, b);
+        //topIsland.fallOffMap = FalloffGenerator.GenerateFalloffMap(mapChunkSize, a, b);
+        topIsland.fallOffMap = botIsland.noiseMap;
         topIsland.noiseMap = Noise.GenerateNoiseMap(mapChunkSize, mapChunkSize, seed, topIsland.noiseScale, topIsland.octaves, topIsland.persistance, topIsland.lacunarity, topIsland.offset);
 
         Color[] colourMapBot = new Color[mapChunkSize * mapChunkSize];
         Color[] colourMapTop = new Color[mapChunkSize * mapChunkSize];
-
-
         
-        //for falloffmap of top Island (same of botIsland
-        for (int y = 0; y < mapChunkSize; y++)
-        {
-            for (int x = 0; x < mapChunkSize; x++)
-            {
-
-                topIsland.noiseMap[x, y] = Mathf.Clamp01(botIsland.fallOffMap[x, y] + 1.0f * topIsland.noiseMap[x, y]);
-
-            }
-        }
-        
+        //Generate for bot side
 
         for (int y = 0; y < mapChunkSize; y++)
         {
@@ -198,6 +194,7 @@ public class FloatIslandGen : MonoBehaviour
                     }
                 }
 
+                /*
                 for (int i = 0; i < topIsland.regions.Length; i++)
                 {
                     if (currentHeightTop <= topIsland.regions[i].height)
@@ -206,6 +203,50 @@ public class FloatIslandGen : MonoBehaviour
                         break;
                     }
                 }
+                */
+
+            }
+        }
+
+        //generate for top side
+
+        //for falloffmap of top Island (same of botIsland
+
+        topIsland.fallOffMap = Noise.GenerateFallFromNoise(topIsland.fallOffMap, mapChunkSize);
+
+        for (int y = 0; y < mapChunkSize; y++)
+        {
+            for (int x = 0; x < mapChunkSize; x++)
+            {
+
+                //topIsland.noiseMap[x, y] = Mathf.Clamp01(topIsland.fallOffMap[x, y] + 1.0f * topIsland.noiseMap[x, y]);
+
+                topIsland.noiseMap[x, y] = Mathf.Clamp01(botIsland.noiseMap[x, y]  * topIsland.noiseMap[x, y] + topIsland.fallOffMap[x,y]);
+
+                //topIsland.noiseMap[x, y] = Mathf.Clamp01(topIsland.fallOffMap[x, y]);
+
+            }
+        }
+        
+
+        //generate color for top side
+
+        for (int y = 0; y < mapChunkSize; y++)
+        {
+            for (int x = 0; x < mapChunkSize; x++)
+            {
+
+                float currentHeightTop = topIsland.noiseMap[x, y];
+
+                for (int i = 0; i < topIsland.regions.Length; i++)
+                {
+                    if (currentHeightTop <= topIsland.regions[i].height)
+                    {
+                        colourMapTop[y * mapChunkSize + x] = topIsland.regions[i].colour;
+                        break;
+                    }
+                }
+                
 
             }
         }
@@ -213,17 +254,20 @@ public class FloatIslandGen : MonoBehaviour
 
         botIsland.noiseTexture = TextureGenerator.TextureFromHeightMap(botIsland.noiseMap);
         botIsland.colorTexture = TextureGenerator.TextureFromColourMap(colourMapBot, mapChunkSize, mapChunkSize);
-        botIsland.fallOffTexture = TextureGenerator.TextureFromHeightMap(FalloffGenerator.GenerateFalloffMap(mapChunkSize, a, b));
+        botIsland.fallOffTexture = TextureGenerator.TextureFromHeightMap(botIsland.fallOffMap);
+
 
         topIsland.noiseTexture = TextureGenerator.TextureFromHeightMap(topIsland.noiseMap);
         topIsland.colorTexture = TextureGenerator.TextureFromColourMap(colourMapTop, mapChunkSize, mapChunkSize);
-        topIsland.fallOffTexture = TextureGenerator.TextureFromHeightMap(FalloffGenerator.GenerateFalloffMap(mapChunkSize, a, b));
+        topIsland.fallOffTexture = TextureGenerator.TextureFromHeightMap(topIsland.fallOffMap);
 
         //We create from bottom
         DrawMesh(MeshGenerator.GenerateTerrainMesh(botIsland.noiseMap, botIsland.meshHeightMultiplier * 10, botIsland.meshHeightCurve, levelOfDetail), botIsland.colorTexture);
 
         MeshHelper.RemovePlanePart(meshFilter, true);//remove aussi les bonnes parties
         MeshHelper.Extrude(meshFilter, 0.9f,topIsland.noiseMap,topIsland.meshHeightMultiplier, topIsland.meshHeightCurve);//0.9 bon
+
+        //MeshHelper.SetHeightExtrude(meshFilter, ind, topIsland.noiseMap);
 
         meshRenderer.sharedMaterials[1].mainTexture = topIsland.colorTexture;
 

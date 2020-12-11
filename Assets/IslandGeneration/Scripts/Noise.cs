@@ -3,7 +3,29 @@ using System.Collections;
 
 public static class Noise {
 
-	public static float[,] GenerateNoiseMap(int mapWidth, int mapHeight, int seed, float scale, int octaves, float persistance, float lacunarity, Vector2 offset) {
+
+    public static float[,] GenerateFallFromNoise(float[,] param, int size)
+    {
+        float[,] noiseMap = new float[size,size];
+
+        for (int i = 0; i < size; i++) {
+
+            for (int j = 0; j < size; j++) {
+                if (param[i, j] > 0.9f)
+                {
+                    noiseMap[i, j] = 1.0f;
+                }
+                else {
+                    noiseMap[i, j] = 0.0f;
+                }
+            }
+        }
+
+        return noiseMap;
+    }
+
+
+    public static float[,] GenerateNoiseMap(int mapWidth, int mapHeight, int seed, float scale, int octaves, float persistance, float lacunarity, Vector2 offset) {
 		float[,] noiseMap = new float[mapWidth,mapHeight];
 
 		System.Random prng = new System.Random (seed);

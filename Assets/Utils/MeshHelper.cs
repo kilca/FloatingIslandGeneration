@@ -100,6 +100,20 @@ int[] triangles, float limite)
 
         return retour;
     }
+    
+    public static void SetHeightExtrude(MeshFilter filter, int ind, float[,] heightMap) {
+        /*
+        Mesh mesh = filter.sharedMesh;
+
+        Vector3[] vertices = mesh.vertices;
+        for(int i = ind; i < vertices.Length; i++)
+        {
+            Debug.Log(vertices[i]);
+        }
+        */
+
+    }
+    
 
     //https://stackoverflow.com/questions/3848923/how-to-extrude-a-flat-2d-mesh-giving-it-depth
     //Attention ordre important car indique normals
@@ -133,13 +147,13 @@ int[] triangles, float limite)
             int x = (int)(nUVs[i].x * width);
             int y =  (int)(nUVs[i].y * height);
 
-            v.y = 140 + heightCurve.Evaluate(heightMap[x, y]) * heightMultiplier;
+            //v.y = 140 + heightCurve.Evaluate(heightMap[x, y]) * heightMultiplier;
+
+            float f = Mathf.Clamp01(-1.0f *(heightMap[x, y]-1.0f));
+            v.y = 140 + 10 * heightCurve.Evaluate(f);
 
             addedVertices[i] = v;
         }
-        
-
-        
 
         nVertices.AddRange(addedVertices);
         
@@ -220,7 +234,6 @@ int[] triangles, float limite)
 
         mesh.normals = newNormals.ToArray();
         mesh.uv = nUVs.ToArray();
-       
 
 
     }
