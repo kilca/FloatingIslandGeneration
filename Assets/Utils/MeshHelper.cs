@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEditor;
 using System.Text;
-
+using System.Linq;
 //other meshHelper : https://wiki.unity3d.com/index.php/MeshHelper
 
 /*
@@ -37,6 +37,28 @@ public static class MeshHelper
         }
 
     }
+
+    public struct TripleEdge
+    {
+        public int a;
+        public int b;
+        public int c;
+
+        public TripleEdge(int a, int b, int c)
+        {
+            this.a = a;
+            this.b = b;
+            this.c = c;
+        }
+
+        override
+        public string ToString()
+        {
+            return "[" + a + "," + b + "]";
+        }
+
+    }
+
 
 
     //incorrect and not used, but the principle looks like it
@@ -80,7 +102,7 @@ int[] triangles, float limite)
     {
 
         List<Edge> retour = new List<Edge>();
-        for (int i = 0; i < triangles.Length - 3; i+=3)
+        for (int i = 0; i < triangles.Length; i+=3)
         {
             if (vertices[triangles[i]].y > limite && vertices[triangles[i + 1]].y > limite)
             {
@@ -117,7 +139,7 @@ int[] triangles, float limite)
 
     //https://stackoverflow.com/questions/3848923/how-to-extrude-a-flat-2d-mesh-giving-it-depth
     //Attention ordre important car indique normals
-    public static void Extrude(MeshFilter filter, float txHauteur, float[,] heightMap, float heightMultiplier, AnimationCurve heightCurve) {
+    public static void Extrude(MeshFilter filter, float txHauteur, float[,] heightMap, float heightMultiplier, AnimationCurve heightCurve, int R) {
 
 
         Mesh mesh = filter.sharedMesh;
@@ -130,8 +152,6 @@ int[] triangles, float limite)
         List<Vector3> nVertices = new List<Vector3>(vertices);
         List<Vector2> nUVs = new List<Vector2>(uvs);
 
-        List<Vector3> addedVertices = new List<Vector3>(vertices);
-
         List<int> newTriangles = new List<int>(triangles);
 
         int width = heightMap.GetLength(0);
@@ -140,6 +160,12 @@ int[] triangles, float limite)
         float topLeftZ = (height - 1) / 2f;
 
         //x and z vertices from -120 to 120
+        List<Edge> boundaries = getBoundariesByLimit(vertices, triangles, 143.0f * txHauteur);
+
+        //nVertices = AVGShort2(nVertices, boundaries, R);
+        nVertices = AVGSad3(boundaries, newTriangles,ref nVertices, R);
+
+        List<Vector3> addedVertices = new List<Vector3>(nVertices);
 
         for (int i = 0; i < addedVertices.Count; i++) {
             Vector3 v = addedVertices[i];
@@ -161,9 +187,20 @@ int[] triangles, float limite)
 
         //-----------------2)
 
-        List<Edge> boundaries = getBoundariesByLimit(vertices, triangles, 128 * txHauteur);
+        //List<Edge> boundaries = getBoundariesByLimit(vertices, triangles, 128 * txHauteur);
+        //List<Edge> boundaries = getBoundariesByLimit(vertices, triangles, 143.0f * txHauteur);
 
-
+        
+        /*
+        GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        GameObject g = GameObject.Instantiate(cube, filter.transform);
+        foreach (Edge e in boundaries)
+        {
+            GameObject.Instantiate(cube, filter.transform.TransformPoint(nVertices[e.a]), Quaternion.identity, g.transform);
+            GameObject.Instantiate(cube, filter.transform.TransformPoint(nVertices[e.b]), Quaternion.identity, g.transform);
+        }
+        */
+        
         //----------------3)
 
         int n = vertices.Length;
@@ -221,7 +258,7 @@ int[] triangles, float limite)
         }
 
 
-        filter.sharedMesh.subMeshCount = 2;
+        filter.sharedMesh.subMeshCount = 9;
 
         mesh.vertices = nVertices.ToArray();
 
@@ -306,5 +343,166 @@ int[] triangles, float limite)
 
 
     }
+
+    //https://www.diva-portal.org/smash/get/diva2:830483/FULLTEXT01.pdf
+    //----------------------Added (if it works) ---------------- 
+
+    public static List<Vector3> AVGShort2(List<Vector3> sharedVertex, List<Edge> edges, int X)
+    {
+
+        List<Vector3> retour = new List<Vector3>(sharedVertex);
+        int div = 0;
+        float posx;
+        float posz;
+        for (int i = 0; i < X; i++)
+        {
+            foreach (Edge e in edges)
+            {
+                Vector3 s = sharedVertex[e.a];
+                div = 1;
+                posx = s.x;
+                posz = s.z;
+
+                div++;
+                posx += sharedVertex[e.b].x;
+                posz += sharedVertex[e.b].z;
+
+                retour[e.a] = new Vector3(posx / div, sharedVertex[e.a].y, posz / div);
+            }
+
+        }
+        return retour;
+
+    }
+
+    //would have been better to take those in a crux shape
+    static List<int> neighbors(int i, List<int> triangles) {
+        List<int> retour = new List<int>();
+        for (int j = 0; j < triangles.Count; j += 3) {
+            if (triangles[j] == i || triangles[j + 1] == i || triangles[j + 2] == i) {
+                for (int k = 0; k < 3; k++) {
+                    if ((j + k) != i) {
+                        retour.Add(j + k);
+                    }
+                }
+            }
+        }
+        return retour;
+    }
+
+    //would have been better to take those in a crux shape
+    static List<int> EdgeNeighbors(int i, List<Edge> es)
+    {
+        List<int> retour = new List<int>();
+
+        foreach (Edge e in es) {
+            if (e.a == i) {
+                retour.Add(e.b);
+            }else if (e.b == i)
+            {
+                retour.Add(e.a);
+            }
+        }
+        return retour.Distinct().ToList();
+    }
+
+
+    //copy of algorithm in the article
+    //works for certains edge but is buggy for some others (due to some incorrect Edge)
+    public static void AVGSad(List<Edge> es, List<int> triangles, ref List<Vector3> sharedVertex, int X)
+    {
+
+
+        int div = 0;
+        float posx;
+        float posz;
+
+        Dictionary<int, Edge> edgeDict = new Dictionary<int, Edge>();
+        foreach (Edge e in es) {
+            if (!edgeDict.ContainsKey(e.a))
+                edgeDict.Add(e.a, e);
+            if (!edgeDict.ContainsKey(e.b))
+                edgeDict.Add(e.b, e);
+        }
+
+        for (int i = 0; i < X; i++)
+        {
+            for (int j = 0; j < sharedVertex.Count; j++)
+            {
+                Vector3 s = sharedVertex[j];//ICI
+                if (edgeDict.ContainsKey(j))
+                {
+                    div = 1;
+                    posx = s.x;
+                    posz = s.z;
+                    foreach (int ind in neighbors(j, triangles))
+                    {
+                        if (edgeDict.ContainsKey(ind))
+                        {
+                            div++;
+                            posx += sharedVertex[ind].x;
+                            posz += sharedVertex[ind].z;
+                        }
+                    }
+                    sharedVertex[j] = new Vector3(posx / div, sharedVertex[j].y, posz / div);
+                }
+
+
+            }
+        }
+
+
+
+    }
+
+    public static List<Vector3> AVGSad3(List<Edge> es, List<int> triangles, ref List<Vector3> sharedVertex, int X)
+    {
+
+        List<Vector3> retour = new List<Vector3>(sharedVertex);
+
+        int div = 0;
+        float posx;
+        float posz;
+
+        Dictionary<int, Edge> edgeDict = new Dictionary<int, Edge>();
+        foreach (Edge e in es)
+        {
+            if (!edgeDict.ContainsKey(e.a))
+                edgeDict.Add(e.a, e);
+            if (!edgeDict.ContainsKey(e.b))
+                edgeDict.Add(e.b, e);
+        }
+
+        for (int i = 0; i < X; i++)
+        {
+            for (int j = 0; j < retour.Count; j++)
+            {
+                Vector3 s = retour[j];//ICI
+                if (edgeDict.ContainsKey(j))
+                {
+                    div = 1;
+                    posx = s.x;
+                    posz = s.z;
+                    foreach (int ind in EdgeNeighbors(j, es))
+                    {
+                        if (edgeDict.ContainsKey(ind))
+                        {
+                            div++;
+                            posx += retour[ind].x;
+                            posz += retour[ind].z;
+                        }
+                    }
+                    if (div != 1)
+                        retour[j] = new Vector3(posx / div, sharedVertex[j].y, posz / div);
+                }
+
+
+            }
+        }
+
+        return retour;
+
+    }
+
 
 }

@@ -136,6 +136,8 @@ public class FloatIslandGen : MonoBehaviour
     public MeshFilter meshFilter;
     public MeshRenderer meshRenderer;
 
+    [Range(0,12)]
+    public int R;
     public void Refresh() {
         if (meshFilter == null || meshRenderer == null) {
             Debug.LogError("Error, the meshs are null");
@@ -266,7 +268,7 @@ public class FloatIslandGen : MonoBehaviour
         DrawMesh(MeshGenerator.GenerateTerrainMesh(botIsland.noiseMap, botIsland.meshHeightMultiplier * 10, botIsland.meshHeightCurve, levelOfDetail), botIsland.colorTexture);
 
         MeshHelper.RemovePlanePart(meshFilter, true);//remove aussi les bonnes parties
-        MeshHelper.Extrude(meshFilter, 0.9f,topIsland.noiseMap,topIsland.meshHeightMultiplier, topIsland.meshHeightCurve);//0.9 bon
+        MeshHelper.Extrude(meshFilter, 0.9f,topIsland.noiseMap,topIsland.meshHeightMultiplier, topIsland.meshHeightCurve, R);//0.9 bon
 
         //MeshHelper.SetHeightExtrude(meshFilter, ind, topIsland.noiseMap);
 

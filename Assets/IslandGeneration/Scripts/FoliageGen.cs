@@ -74,6 +74,7 @@ public class FoliageGen : MonoBehaviour
 
     }
 
+    //https://www.redblobgames.com/maps/terrain-from-noise/
     public List<Vector3> PlaceTrees(int height, int width, int seed, int R, float[,] fallOffMap)
     {
 
