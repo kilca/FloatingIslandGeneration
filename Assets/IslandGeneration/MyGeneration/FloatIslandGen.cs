@@ -60,9 +60,12 @@ public class FloatIslandGenEditor : Editor
 
         }
 
-
-
-        /*
+        if (mapGen.useRiver)
+        {
+            GUILayout.Label("River Map");
+            GUILayout.Label(mapGen.riverTexture);
+        }
+           /*
         Texture2D myTexture = AssetPreview.GetAssetPreview(object);
         GUILayout.Label(myTexture);
         */
@@ -136,8 +139,16 @@ public class FloatIslandGen : MonoBehaviour
     public MeshFilter meshFilter;
     public MeshRenderer meshRenderer;
 
+    //smooth coefficient
     [Range(0,12)]
     public int R;
+
+    public bool useRiver;
+
+    private float[,] riverMap;
+    [HideInInspector]
+    public Texture2D riverTexture;
+
     public void Refresh() {
         if (meshFilter == null || meshRenderer == null) {
             Debug.LogError("Error, the meshs are null");
@@ -197,16 +208,6 @@ public class FloatIslandGen : MonoBehaviour
                     }
                 }
 
-                /*
-                for (int i = 0; i < topIsland.regions.Length; i++)
-                {
-                    if (currentHeightTop <= topIsland.regions[i].height)
-                    {
-                        colourMapTop[y * mapChunkSize + x] = topIsland.regions[i].colour;
-                        break;
-                    }
-                }
-                */
 
             }
         }
@@ -222,11 +223,7 @@ public class FloatIslandGen : MonoBehaviour
             for (int x = 0; x < mapChunkSize; x++)
             {
 
-                //topIsland.noiseMap[x, y] = Mathf.Clamp01(topIsland.fallOffMap[x, y] + 1.0f * topIsland.noiseMap[x, y]);
-
                 topIsland.noiseMap[x, y] = Mathf.Clamp01(botIsland.noiseMap[x, y]  * topIsland.noiseMap[x, y] + topIsland.fallOffMap[x,y]);
-
-                //topIsland.noiseMap[x, y] = Mathf.Clamp01(topIsland.fallOffMap[x, y]);
 
             }
         }
@@ -268,23 +265,46 @@ public class FloatIslandGen : MonoBehaviour
         DrawMesh(MeshGenerator.GenerateTerrainMesh(botIsland.noiseMap, botIsland.meshHeightMultiplier * 10, botIsland.meshHeightCurve, levelOfDetail), botIsland.colorTexture);
 
         MeshHelper.RemovePlanePart(meshFilter, true);//remove aussi les bonnes parties
-        MeshHelper.Extrude(meshFilter, 0.9f,topIsland.noiseMap,topIsland.meshHeightMultiplier, topIsland.meshHeightCurve, R);//0.9 bon
 
-        //MeshHelper.SetHeightExtrude(meshFilter, ind, topIsland.noiseMap);
+        if (useRiver)
+        {
+            riverMap = Noise.GenerateRiverMap(topIsland.noiseMap, 3);
+            riverTexture = TextureGenerator.TextureFromHeightMap(riverMap);
+            List<Vector3> r = MeshHelper.Extrude(meshFilter, 0.9f, topIsland.noiseMap, topIsland.meshHeightMultiplier, topIsland.meshHeightCurve, R, riverMap);//0.9 bon
+            //PlaceRiver(meshFilter, riverMap, r);
+        }
+        else
+        {
+            MeshHelper.Extrude(meshFilter, 0.9f, topIsland.noiseMap, topIsland.meshHeightMultiplier, topIsland.meshHeightCurve, R, new float[mapChunkSize, mapChunkSize]);//0.9 bon
+        }
 
         meshRenderer.sharedMaterials[1].mainTexture = topIsland.colorTexture;
 
-        /*
-        int R = 8;
-        
-        List<Vector3> t = MeshHelper.PlaceTrees(mapChunkSize, mapChunkSize,seed, R, topIsland.noiseMap);
 
-        StringBuilder sb = new StringBuilder();
-
-        foreach(Vector3 v in t) {
-            sb.Append(v + "\n");
-        }
-        Debug.Log(sb);
-        */
+        //MeshHelper2.CreateRiver(meshFilter);
     }
+
+    void PlaceRiver(MeshFilter mf, float[,] riverNoise, List<Vector3> r)
+    {
+        GameObject river = GameObject.FindGameObjectWithTag("River");
+        if (river != null)
+            DestroyImmediate(river);
+
+        GameObject g = (GameObject) Instantiate(Resources.Load("RiverLine"));
+
+        Vector3 gPos = mf.transform.TransformPoint(r[0]);
+        g.transform.position = gPos;
+
+        Vector3[] pos = new Vector3[r.Count-1];
+        for(int i = 1; i < r.Count; i++)
+        {
+            pos[i-1] = r[i]-r[0];
+        }
+        LineRenderer lr = g.GetComponent<LineRenderer>();
+
+        Debug.Log(pos.Length);
+
+        lr.SetPositions(pos);
+    }
+
 }
