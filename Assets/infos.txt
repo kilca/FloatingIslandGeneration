@@ -1,0 +1,8 @@
+Tree models by Broken Vector : https://twitter.com/Broken_vector
+Some terrains material are from : https://github.com/SebLague/Hydraulic-Erosion
+
+Todo : 
+
+- River mesh (and not LineRenderer)
+- Better top generation (fix border)
+- Example with FPS Character

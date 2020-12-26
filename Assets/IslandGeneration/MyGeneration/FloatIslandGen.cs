@@ -137,26 +137,34 @@ public class FloatIslandGen : MonoBehaviour
     //------
 
     public MeshFilter meshFilter;
-    public MeshRenderer meshRenderer;
+    private MeshRenderer meshRenderer;
 
     //smooth coefficient
     [Range(0,12)]
-    public int R;
+    public int smoothStrength;
 
     public bool useRiver;
 
-    private float[,] riverMap;
     [HideInInspector]
     public Texture2D riverTexture;
 
+    private MeshHandler handler;
+
     public void Refresh() {
-        if (meshFilter == null || meshRenderer == null) {
+        if (meshFilter == null) {
             Debug.LogError("Error, the meshs are null");
+            return;
         }
-        if (meshFilter.transform != meshRenderer.transform) {
-            Debug.LogError("Error, the transform must be the same");
-        }
-        GenerateMap();
+
+        GameObject river = GameObject.FindGameObjectWithTag("River");
+        if (river != null)
+            DestroyImmediate(river);
+
+        meshRenderer = meshFilter.GetComponent<MeshRenderer>();
+
+        handler = new MeshHandler(meshFilter, this);
+        handler.GenerateMap();
+        meshRenderer.sharedMaterials[1].mainTexture = topIsland.colorTexture;
     }
     
     public void DrawTexture(Texture2D texture)
@@ -171,124 +179,32 @@ public class FloatIslandGen : MonoBehaviour
         meshRenderer.sharedMaterial.mainTexture = texture;
     }
 
-    public void GenerateMap()
+    public void PlaceRiver0(MeshFilter mf, float[,] riverNoise, List<Vector3> r)
     {
+        Vector3 decalage = new Vector3(0, 320, 0);
+        const int riverWidth = 80;
 
-        botIsland.fallOffMap = FalloffGenerator.GenerateFalloffMap(mapChunkSize, a, b);
-        botIsland.noiseMap = Noise.GenerateNoiseMap(mapChunkSize, mapChunkSize, seed, botIsland.noiseScale, botIsland.octaves, botIsland.persistance, botIsland.lacunarity, botIsland.offset);
 
-        //topIsland.fallOffMap = FalloffGenerator.GenerateFalloffMap(mapChunkSize, a, b);
-        topIsland.fallOffMap = botIsland.noiseMap;
-        topIsland.noiseMap = Noise.GenerateNoiseMap(mapChunkSize, mapChunkSize, seed, topIsland.noiseScale, topIsland.octaves, topIsland.persistance, topIsland.lacunarity, topIsland.offset);
+        GameObject g = (GameObject)Instantiate(Resources.Load("RiverLine"), decalage, Quaternion.identity,transform.parent);
 
-        Color[] colourMapBot = new Color[mapChunkSize * mapChunkSize];
-        Color[] colourMapTop = new Color[mapChunkSize * mapChunkSize];
-        
-        //Generate for bot side
-
-        for (int y = 0; y < mapChunkSize; y++)
+        Vector3[] pos = new Vector3[r.Count];
+        for (int i = 0; i < r.Count; i++)
         {
-            for (int x = 0; x < mapChunkSize; x++)
-            {
-
-
-                //1.0f * or 0.5 *
-                botIsland.noiseMap[x, y] = Mathf.Clamp01(botIsland.fallOffMap[x, y] + 1.0f * botIsland.noiseMap[x, y]);
-
-
-                float currentHeightBot = botIsland.noiseMap[x, y];//bot
-                float currentHeightTop = topIsland.noiseMap[x, y];
-
-                for (int i = 0; i < botIsland.regions.Length; i++)
-                {
-                    if (currentHeightBot <= botIsland.regions[i].height)
-                    {
-                        colourMapBot[y * mapChunkSize + x] = botIsland.regions[i].colour;
-                        break;
-                    }
-                }
-
-
-            }
+            pos[i] = mf.transform.TransformPoint(r[i]);
         }
+        LineRenderer lr = g.GetComponent<LineRenderer>();
 
-        //generate for top side
+        lr.positionCount = pos.Length;
+        lr.SetPositions(pos);
 
-        //for falloffmap of top Island (same of botIsland
+        lr.startWidth = riverWidth;
+        lr.endWidth = riverWidth;
 
-        topIsland.fallOffMap = Noise.GenerateFallFromNoise(topIsland.fallOffMap, mapChunkSize);
-
-        for (int y = 0; y < mapChunkSize; y++)
-        {
-            for (int x = 0; x < mapChunkSize; x++)
-            {
-
-                topIsland.noiseMap[x, y] = Mathf.Clamp01(botIsland.noiseMap[x, y]  * topIsland.noiseMap[x, y] + topIsland.fallOffMap[x,y]);
-
-            }
-        }
-        
-
-        //generate color for top side
-
-        for (int y = 0; y < mapChunkSize; y++)
-        {
-            for (int x = 0; x < mapChunkSize; x++)
-            {
-
-                float currentHeightTop = topIsland.noiseMap[x, y];
-
-                for (int i = 0; i < topIsland.regions.Length; i++)
-                {
-                    if (currentHeightTop <= topIsland.regions[i].height)
-                    {
-                        colourMapTop[y * mapChunkSize + x] = topIsland.regions[i].colour;
-                        break;
-                    }
-                }
-                
-
-            }
-        }
-
-
-        botIsland.noiseTexture = TextureGenerator.TextureFromHeightMap(botIsland.noiseMap);
-        botIsland.colorTexture = TextureGenerator.TextureFromColourMap(colourMapBot, mapChunkSize, mapChunkSize);
-        botIsland.fallOffTexture = TextureGenerator.TextureFromHeightMap(botIsland.fallOffMap);
-
-
-        topIsland.noiseTexture = TextureGenerator.TextureFromHeightMap(topIsland.noiseMap);
-        topIsland.colorTexture = TextureGenerator.TextureFromColourMap(colourMapTop, mapChunkSize, mapChunkSize);
-        topIsland.fallOffTexture = TextureGenerator.TextureFromHeightMap(topIsland.fallOffMap);
-
-        //We create from bottom
-        DrawMesh(MeshGenerator.GenerateTerrainMesh(botIsland.noiseMap, botIsland.meshHeightMultiplier * 10, botIsland.meshHeightCurve, levelOfDetail), botIsland.colorTexture);
-
-        MeshHelper.RemovePlanePart(meshFilter, true);//remove aussi les bonnes parties
-
-        if (useRiver)
-        {
-            riverMap = Noise.GenerateRiverMap(topIsland.noiseMap, 3);
-            riverTexture = TextureGenerator.TextureFromHeightMap(riverMap);
-            List<Vector3> r = MeshHelper.Extrude(meshFilter, 0.9f, topIsland.noiseMap, topIsland.meshHeightMultiplier, topIsland.meshHeightCurve, R, riverMap);//0.9 bon
-            //PlaceRiver(meshFilter, riverMap, r);
-        }
-        else
-        {
-            MeshHelper.Extrude(meshFilter, 0.9f, topIsland.noiseMap, topIsland.meshHeightMultiplier, topIsland.meshHeightCurve, R, new float[mapChunkSize, mapChunkSize]);//0.9 bon
-        }
-
-        meshRenderer.sharedMaterials[1].mainTexture = topIsland.colorTexture;
-
-
-        //MeshHelper2.CreateRiver(meshFilter);
     }
 
-    void PlaceRiver(MeshFilter mf, float[,] riverNoise, List<Vector3> r)
+
+    public void PlaceRiver(MeshFilter mf, float[,] riverNoise, List<Vector3> r)
     {
-        GameObject river = GameObject.FindGameObjectWithTag("River");
-        if (river != null)
-            DestroyImmediate(river);
 
         GameObject g = (GameObject) Instantiate(Resources.Load("RiverLine"));
 
@@ -304,6 +220,12 @@ public class FloatIslandGen : MonoBehaviour
 
         Debug.Log(pos.Length);
 
+        foreach (var t in pos)
+        {
+            Debug.Log(t);
+        }
+
+        lr.positionCount = pos.Length;
         lr.SetPositions(pos);
     }
 

@@ -45,7 +45,7 @@ public class FoliageGen : MonoBehaviour
 
         if (gen.topIsland.fallOffMap == null) {
             Debug.LogWarning("Island not generated before, did it for you");
-            gen.GenerateMap();
+            gen.Refresh();
         }
 
         DestroyChilds(genTransform);

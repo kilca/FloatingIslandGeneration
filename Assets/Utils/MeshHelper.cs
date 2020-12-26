@@ -38,62 +38,6 @@ public static class MeshHelper
 
     }
 
-    public struct TripleEdge
-    {
-        public int a;
-        public int b;
-        public int c;
-
-        public TripleEdge(int a, int b, int c)
-        {
-            this.a = a;
-            this.b = b;
-            this.c = c;
-        }
-
-        override
-        public string ToString()
-        {
-            return "[" + a + "," + b + "]";
-        }
-
-    }
-
-
-
-    //incorrect and not used, but the principle looks like it
-    public static List<Edge> getBoundaries(Vector3[] vertices,
-    int[] triangles) {
-
-        List<Edge> boundaries = new List<Edge>();
-        for (int i = 0; i < triangles.Length - 1; i++)
-        {
-            boundaries.Add(new Edge(triangles[i], triangles[i + 1]));
-        }
-
-        //OPTIMISABLE (POTENTIELLEMENT AVEC JUSTE GET TAILLE A DESSUS DE N
-        List<Edge> internals = new List<Edge>();
-        foreach (Edge e in boundaries)
-        {
-            foreach (Edge e2 in boundaries)
-            {
-                if (e.IsOpposite(e2))
-                {
-                    internals.Add(e);
-                    internals.Add(e2);
-                }
-            }
-        }
-
-        //Optimisable avec RemoveAll
-        foreach (Edge e in internals)
-        {
-            boundaries.Remove(e);
-        }
-
-        return null;
-    }
-
 
     ///--------------------Used---------------
 
@@ -123,22 +67,9 @@ int[] triangles, float limite)
         return retour;
     }
     
-    public static void SetHeightExtrude(MeshFilter filter, int ind, float[,] heightMap) {
-        /*
-        Mesh mesh = filter.sharedMesh;
 
-        Vector3[] vertices = mesh.vertices;
-        for(int i = ind; i < vertices.Length; i++)
-        {
-            Debug.Log(vertices[i]);
-        }
-        */
-
-    }
-    
-
-    //https://stackoverflow.com/questions/3848923/how-to-extrude-a-flat-2d-mesh-giving-it-depth
-    //Attention ordre important car indique normals
+    //from : https://stackoverflow.com/questions/3848923/how-to-extrude-a-flat-2d-mesh-giving-it-depth
+    //Be careful, the order is important because of the normals
     public static List<Vector3> Extrude(MeshFilter filter, float txHauteur, float[,] heightMap, float heightMultiplier, AnimationCurve heightCurve, int R, float[,] riverHeight) {
 
         List<Vector3> retour = new List<Vector3>();
@@ -163,8 +94,7 @@ int[] triangles, float limite)
         //x and z vertices from -120 to 120
         List<Edge> boundaries = getBoundariesByLimit(vertices, triangles, 143.0f * txHauteur);
 
-        //nVertices = AVGShort2(nVertices, boundaries, R);
-        nVertices = AVGSad3(boundaries, newTriangles,ref nVertices, R);
+        nVertices = SmoothBorderByAverage(boundaries, newTriangles,ref nVertices, R);
 
         List<Vector3> addedVertices = new List<Vector3>(nVertices);
 
@@ -192,20 +122,6 @@ int[] triangles, float limite)
         nUVs.AddRange(nUVs);
 
         //-----------------2)
-
-        //List<Edge> boundaries = getBoundariesByLimit(vertices, triangles, 128 * txHauteur);
-        //List<Edge> boundaries = getBoundariesByLimit(vertices, triangles, 143.0f * txHauteur);
-
-        
-        /*
-        GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        GameObject g = GameObject.Instantiate(cube, filter.transform);
-        foreach (Edge e in boundaries)
-        {
-            GameObject.Instantiate(cube, filter.transform.TransformPoint(nVertices[e.a]), Quaternion.identity, g.transform);
-            GameObject.Instantiate(cube, filter.transform.TransformPoint(nVertices[e.b]), Quaternion.identity, g.transform);
-        }
-        */
         
         //----------------3)
 
@@ -352,52 +268,6 @@ int[] triangles, float limite)
 
     }
 
-    //https://www.diva-portal.org/smash/get/diva2:830483/FULLTEXT01.pdf
-    //----------------------Added (if it works) ---------------- 
-
-    public static List<Vector3> AVGShort2(List<Vector3> sharedVertex, List<Edge> edges, int X)
-    {
-
-        List<Vector3> retour = new List<Vector3>(sharedVertex);
-        int div = 0;
-        float posx;
-        float posz;
-        for (int i = 0; i < X; i++)
-        {
-            foreach (Edge e in edges)
-            {
-                Vector3 s = sharedVertex[e.a];
-                div = 1;
-                posx = s.x;
-                posz = s.z;
-
-                div++;
-                posx += sharedVertex[e.b].x;
-                posz += sharedVertex[e.b].z;
-
-                retour[e.a] = new Vector3(posx / div, sharedVertex[e.a].y, posz / div);
-            }
-
-        }
-        return retour;
-
-    }
-
-    //would have been better to take those in a crux shape
-    static List<int> neighbors(int i, List<int> triangles) {
-        List<int> retour = new List<int>();
-        for (int j = 0; j < triangles.Count; j += 3) {
-            if (triangles[j] == i || triangles[j + 1] == i || triangles[j + 2] == i) {
-                for (int k = 0; k < 3; k++) {
-                    if ((j + k) != i) {
-                        retour.Add(j + k);
-                    }
-                }
-            }
-        }
-        return retour;
-    }
-
     //would have been better to take those in a crux shape
     static List<int> EdgeNeighbors(int i, List<Edge> es)
     {
@@ -414,56 +284,12 @@ int[] triangles, float limite)
         return retour.Distinct().ToList();
     }
 
-
-    //copy of algorithm in the article
-    //works for certains edge but is buggy for some others (due to some incorrect Edge)
-    public static void AVGSad(List<Edge> es, List<int> triangles, ref List<Vector3> sharedVertex, int X)
-    {
-
-
-        int div = 0;
-        float posx;
-        float posz;
-
-        Dictionary<int, Edge> edgeDict = new Dictionary<int, Edge>();
-        foreach (Edge e in es) {
-            if (!edgeDict.ContainsKey(e.a))
-                edgeDict.Add(e.a, e);
-            if (!edgeDict.ContainsKey(e.b))
-                edgeDict.Add(e.b, e);
-        }
-
-        for (int i = 0; i < X; i++)
-        {
-            for (int j = 0; j < sharedVertex.Count; j++)
-            {
-                Vector3 s = sharedVertex[j];//ICI
-                if (edgeDict.ContainsKey(j))
-                {
-                    div = 1;
-                    posx = s.x;
-                    posz = s.z;
-                    foreach (int ind in neighbors(j, triangles))
-                    {
-                        if (edgeDict.ContainsKey(ind))
-                        {
-                            div++;
-                            posx += sharedVertex[ind].x;
-                            posz += sharedVertex[ind].z;
-                        }
-                    }
-                    sharedVertex[j] = new Vector3(posx / div, sharedVertex[j].y, posz / div);
-                }
-
-
-            }
-        }
-
-
-
-    }
-
-    public static List<Vector3> AVGSad3(List<Edge> es, List<int> triangles, ref List<Vector3> sharedVertex, int X)
+    /// <summary>
+    /// Smooth the border of the Island by calculating the avg of every node.
+    /// It permit to remove some triangle aspect
+    /// come from : https://www.diva-portal.org/smash/get/diva2:830483/FULLTEXT01.pdf
+    /// </summary>
+    public static List<Vector3> SmoothBorderByAverage(List<Edge> es, List<int> triangles, ref List<Vector3> sharedVertex, int X)
     {
 
         List<Vector3> retour = new List<Vector3>(sharedVertex);
